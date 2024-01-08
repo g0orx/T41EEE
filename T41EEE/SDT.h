@@ -1,6 +1,34 @@
 #ifndef BEENHERE
 #define BEENHERE
 
+// G0ORX changes by John Melton
+//
+// G0ORX_FRONTPANEL and G0ORX_FRONTPANEL2 are mutually exclusive  (only enable 1 of them if at all)
+// G0ORX_FRONTPANEL is the MCP23017 front panel for the encoders and push buttons
+// G0ORX_FRONTPANEL_2 is the Raspberry Pi Pico front panel
+#define G0ORX_FRONTPANEL
+//#define G0ORX_FRONTPANEL_2
+
+#if (defined(G0ORX_FRONTPANEL) && defined(G0ORX_FRONTPANEL_2))
+#error Only G0ORX_FRONTPANEL OR G0ORX_FRONTPANEL_2 can be defined (not both)
+#endif
+
+// G0ORX_CAT will include ts-2000 CAT interface over USB Serial (the same port used for programming the Teensy 4.1)
+#define G0ORX_CAT
+
+// G0ORX_AUDIO_DISPLAY draws a Time Domain plot of the Microphone or CW  Audio when transmitting
+#define G0ORX_AUDIO_DISPLAY
+
+// G0ORX_VFO -- uses User1 to copy VFOA to VFOB, User2 to copy VFOB to VFOA
+#define G0ORX_VFO
+
+//#define NETWORK
+#ifdef NETWORK
+#include <NativeEthernet.h>
+#include <NativeEthernetUdp.h>
+extern uint8_t my_mac[];
+#endif
+
 //======================================== User section that might need to be changed ===================================
 #include "MyConfigurationFile.h"  // This file name should remain unchanged
 #define VERSION "T41EEE.1"        // Change this for updates. If you make this longer than 9 characters, brace yourself for surprises
@@ -26,12 +54,20 @@ extern struct maps myMapFiles[];
 #include <SPI.h>
 #include <SD.h>
 #include <Metro.h>
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
 #include <Bounce.h>
+#endif
 #include <arm_math.h>
 #include <arm_const_structs.h>
 #include <si5351.h>  // https://github.com/etherkit/Si5351Arduino
 #include <RA8875.h>  // https://github.com/mjs513/RA8875/tree/RA8875_t4
+#ifdef G0ORX_FRONTPANEL
+#include <Adafruit_MCP23X17.h>
+#include "G0ORX_Rotary.h"
+#endif
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
 #include <Rotary.h>  // https://github.com/brianlow/Rotary
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -311,6 +347,9 @@ extern struct maps myMapFiles[];
 #define TFT_MISO 12
 #define TFT_SCLK 13
 #define TFT_RST 255
+#ifdef G0ORX_FRONTPANEL_2
+#define TFT_INTERRUPT 14
+#endif
 //========================================= Encoder pins  Jack Purdum W8TEE September 25, 2023
 #ifdef FOURSQRP
 #define VOLUME_ENCODER_A 2
@@ -1145,6 +1184,13 @@ extern AudioConvert_F32toI16 float2Int1, float2Int2;  //Converts Float to Int16.
 
 extern void SetAudioOperatingState(int operatingState);
 
+#ifdef G0ORX_FRONTPANEL
+ extern G0ORX_Rotary volumeEncoder;    // (2,  3)
+ extern G0ORX_Rotary tuneEncoder;      // (16, 17)
+ extern G0ORX_Rotary filterEncoder;    // (14, 15)
+ extern G0ORX_Rotary fineTuneEncoder;  // (4,  5);
+#endif
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
 extern Rotary volumeEncoder;    // (2,  3)
 extern Rotary tuneEncoder;      // (16, 17)
 extern Rotary filterEncoder;    // (14, 15)
@@ -1153,6 +1199,7 @@ extern Rotary fineTuneEncoder;  // (4,  5);
 //extern Rotary fineTuneEncoder;
 //extern Encoder filterEncoder;
 //extern Encoder volumeEncoder;
+#endif
 
 extern Metro ms_500;
 extern Metro ms_300000;      // Set up a Metro
@@ -2198,6 +2245,11 @@ void sineTone(int numCycles);
 void initCWShaping();
 int SpectrumOptions();
 
+#ifdef G0ORX_AUDIO_DISPLAY
+ extern float32_t mic_audio_buffer[];
+ void ShowTXAudio();
+#endif
+
 void TurnOffInitializingMessage();
 
 void UpdateInfoWindow();
@@ -2209,6 +2261,7 @@ extern "C" {
 }
 void ShowFrequency();
 void ShowMenu(const char *menu[], int where);
+void ShowMessageOnWaterfall(String message); // G0ORX
 void ShowName();
 void ShowNotch();
 void ShowSpectrum();
@@ -2257,5 +2310,43 @@ int Xmit_IQ_Cal();  //AFP 09-21-22
 
 void ZoomFFTPrep();
 void ZoomFFTExe(uint32_t blockSize);
+
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2)
+#define AUDIO_VOLUME 0
+#define MIC_GAIN 1
+#define AGC_GAIN 2
+#define SIDETONE_VOLUME 3
+#define NOISE_FLOOR_LEVEL 4
+
+ extern int volumeFunction;
+#endif
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2) || defined(G0ORX_CAT)
+ extern int my_ptt;
+#endif
+
+#ifdef G0ORX_CAT
+ extern int CATOptions();
+ extern bool catTX;
+ extern void CATSerialEvent();
+ extern int ChangeBand(long f, boolean updateRelays);
+#endif
+
+#ifdef G0ORX_FRONTPANEL
+ extern int G0ORXButtonPressed;
+ extern void FrontPanelInit();
+ extern void FrontPanelCheck();
+ extern void FrontPanelSetLed(int led, uint8_t state);
+#endif
+
+#ifdef G0ORX_FRONTPANEL_2
+ extern int G0ORXButtonPressed;
+ extern void FrontPanel2Init();
+ extern uint16_t get_interrupt_mask();
+ extern void getKeypad();
+ extern int16_t get_encoder_value(uint8_t encoder);
+ extern uint8_t get_switch_state(uint8_t sw);
+ extern void get_touch();
+ extern void FrontPanelSetLed(int led, bool state);
+#endif
 
 #endif

@@ -137,13 +137,19 @@ void ZoomFFTExe (uint32_t blockSize)
     // zoom_sample_ptr points to the oldest sample now
 
     float32_t multiplier = (float32_t)EEPROMData.spectrum_zoom * (float32_t)EEPROMData.spectrum_zoom;
-    
+
+    // G0ORX
+    float32_t hanning;
+
     for (int idx = 0; idx < fftWidth; idx++)
     {
+      hanning = multiplier * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES)); // G0ORX
    //   buffer_spec_FFT[idx * 2 + 0] =  multiplier * FFT_ring_buffer_x[zoom_sample_ptr] * nuttallWindow256[idx];
    //   buffer_spec_FFT[idx * 2 + 1] =  multiplier * FFT_ring_buffer_y[zoom_sample_ptr] * nuttallWindow256[idx];
-      buffer_spec_FFT[idx * 2 + 0] =  multiplier * FFT_ring_buffer_x[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES)); //Hanning Window AFP 03-12-21
-      buffer_spec_FFT[idx * 2 + 1] =  multiplier * FFT_ring_buffer_y[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES));
+      //buffer_spec_FFT[idx * 2 + 0] =  multiplier * FFT_ring_buffer_x[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES)); //Hanning Window AFP 03-12-21
+      //buffer_spec_FFT[idx * 2 + 1] =  multiplier * FFT_ring_buffer_y[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES));
+      buffer_spec_FFT[idx * 2 + 0] =  FFT_ring_buffer_x[zoom_sample_ptr] * hanning; //Hanning Window AFP 03-12-21
+      buffer_spec_FFT[idx * 2 + 1] =  FFT_ring_buffer_y[zoom_sample_ptr] * hanning;
       zoom_sample_ptr++;
       if (zoom_sample_ptr >= fftWidth) zoom_sample_ptr = 0;
     }
@@ -205,7 +211,7 @@ void ZoomFFTExe (uint32_t blockSize)
 void CalcZoom1Magn()
 {
  if (updateDisplayFlag == 1) {
-  float32_t spec_help = 0.0;
+  // float32_t spec_help = 0.0; // G0ORX
   float32_t LPFcoeff = 0.7;  // Is this a global or not?
   if (LPFcoeff > 1.0) {
     LPFcoeff = 1.0;
@@ -235,8 +241,9 @@ void CalcZoom1Magn()
   // apply low pass filter and scale the magnitude values and convert to int for spectrum display
 
   for (int16_t x = 0; x < SPECTRUM_RES; x++) {
-    spec_help = EEPROMData.LPFcoeff * FFT_spec[x] + (1.0 - EEPROMData.LPFcoeff) * FFT_spec_old[x];
-    FFT_spec_old[x] = spec_help;
+    // G0ORX
+    //spec_help = EEPROMData.LPFcoeff * FFT_spec[x] + (1.0 - EEPROMData.LPFcoeff) * FFT_spec_old[x];
+    //FFT_spec_old[x] = spec_help;
 
 #ifdef USE_LOG10FAST
     pixelnew[x] = displayScale[EEPROMData.currentScale].baseOffset + bands[EEPROMData.currentBand].pixel_offset + (int16_t) (displayScale[EEPROMData.currentScale].dBScale * log10f_fast(FFT_spec[x]));

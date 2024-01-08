@@ -82,6 +82,25 @@ to prior versions.
 #include "SDT.h"
 #endif
 
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2) || defined(G0ORX_CAT)
+int my_ptt=HIGH;  // Active LOW
+
+void PTT_Interrupt() {
+  my_ptt = digitalRead(PTT);
+}
+#endif
+
+#ifdef G0ORX_FRONTPANEL_2
+int touchPrimaryMenuIndex = -1;
+int touchSecondaryMenuIndex = -1;
+#endif
+
+#ifdef NETWORK
+uint8_t my_mac[] = {
+  0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x02
+};
+#endif
+
 const char *filename = "/config.txt";  // <- SD library uses 8.3 filenames
 
 struct maps myMapFiles[10] = {
@@ -230,10 +249,12 @@ AudioConnection patchCord24(Q_out_R_Ex, 0, modeSelectOutR, 1);
 AudioControlSGTL5000 sgtl5000_2;
 // ===========================  AFP 08-22-22 end
 
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
 Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        //( 2,  3)
 Rotary tuneEncoder = Rotary(TUNE_ENCODER_A, TUNE_ENCODER_B);              //(16, 17)
 Rotary filterEncoder = Rotary(FILTER_ENCODER_A, FILTER_ENCODER_B);        //(15, 14)
 Rotary fineTuneEncoder = Rotary(FINETUNE_ENCODER_A, FINETUNE_ENCODER_B);  //( 4,  5)
+#endif
 
 Metro ms_500 = Metro(500);  // Set up a Metro
 Metro ms_300000 = Metro(300000);
@@ -254,6 +275,11 @@ RA8875 tft = RA8875(RA8875_CS, RA8875_RESET);
 SPISettings settingsA(70000000UL, MSBFIRST, SPI_MODE1);
 
 const uint32_t N_B_EX = 16;
+
+#ifdef G0ORX_AUDIO_DISPLAY
+float32_t mic_audio_buffer[256];
+#endif
+
 //================== Receive EQ Variables================= AFP 08-08-22
 //float32_t recEQ_Level[14];
 //float32_t recEQ_LevelScale[14];
@@ -887,6 +913,10 @@ const uint16_t n_dec2_taps = (1 + (uint16_t)(n_att / (22.0 * (n_fstop2 - n_fpass
 int resultOldFactor;
 float incrFactor;
 int mute = 0;
+
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2)
+int volumeFunction = AUDIO_VOLUME; // G0ORX
+#endif
 
 float adjustVolEncoder;
 int adjustIQ;
@@ -1948,6 +1978,25 @@ void Splash() {
   centerCall = (XPIXELS - strlen(MY_CALL) * tft.getFontWidth()) / 2;
   tft.setCursor(centerCall, YPIXELS / 2 + 160);
   tft.print(MY_CALL);
+
+#ifdef G0ORX_CAT
+  tft.setFontScale(1);
+  tft.setCursor(0, YPIXELS / 4 + 150);
+  tft.print("Includes: USB CAT by John Melton, G0ORX");
+#endif
+
+#ifdef G0ORX_FRONTPANEL
+  tft.setFontScale(1);
+  tft.setCursor(0, YPIXELS / 4 + 180);
+  tft.print("Includes: Front Panel by John Melton, G0ORX");
+#endif
+
+#ifdef G0ORX_FRONTPANEL_2
+  tft.setFontScale(1);
+  tft.setCursor(0, YPIXELS / 4 + 180);
+  tft.print("Includes: Pico Front Panel by John Melton, G0ORX");
+#endif
+
   MyDelay(SPLASH_DELAY);
   tft.fillWindow(RA8875_BLACK);
 }
@@ -1971,11 +2020,23 @@ void setup() {
   Teensy3Clock.set(now());  // set the RTC
   T4_rtc_set(Teensy3Clock.get());
 
+  #ifdef NETWORK
+  if (Ethernet.begin(my_mac) == 0) {
+    Serial.println("Failed to configure Ethernet using DHCP");
+    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+      Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+    } else if (Ethernet.linkStatus() == LinkOFF) {
+      Serial.println("Ethernet cable is not connected.");
+    }
+  }
+#endif
+
   sgtl5000_1.setAddress(LOW);
   sgtl5000_1.enable();
   AudioMemory(500);  //  Increased to 450 from 400.  Memory was hitting max.  KF5N August 31, 2023
   AudioMemory_F32(10);
   sgtl5000_1.inputSelect(AUDIO_INPUT_MIC);
+  sgtl5000_1.micBiasDisable();  // G0ORX
   sgtl5000_1.micGain(20);
   sgtl5000_1.lineInLevel(0);
   sgtl5000_1.lineOutLevel(20);
@@ -1993,12 +2054,17 @@ void setup() {
   pinMode(MUTE, OUTPUT);
   digitalWrite(MUTE, LOW);
   pinMode(PTT, INPUT_PULLUP);
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
   pinMode(BUSY_ANALOG_PIN, INPUT);
   pinMode(FILTER_ENCODER_A, INPUT);
   pinMode(FILTER_ENCODER_B, INPUT);
+#endif
   pinMode(OPTO_OUTPUT, OUTPUT);
   pinMode(KEYER_DIT_INPUT_TIP, INPUT_PULLUP);
   pinMode(KEYER_DAH_INPUT_RING, INPUT_PULLUP);
+#ifdef G0ORX_FRONTPANEL_2
+  pinMode(TFT_INTERRUPT, INPUT_PULLUP);
+#endif
   pinMode(TFT_MOSI, OUTPUT);
   digitalWrite(TFT_MOSI, HIGH);
   pinMode(TFT_SCLK, OUTPUT);
@@ -2025,6 +2091,7 @@ void setup() {
   *(digital_pin_to_info_PGM + 11)->pad = iospeed_display;  //MOSI
   *(digital_pin_to_info_PGM + TFT_CS)->pad = iospeed_display;
 
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
   tuneEncoder.begin(true);
   volumeEncoder.begin(true);
   attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_A), EncoderVolume, CHANGE);
@@ -2035,6 +2102,10 @@ void setup() {
   fineTuneEncoder.begin(true);
   attachInterrupt(digitalPinToInterrupt(FINETUNE_ENCODER_A), EncoderFineTune, CHANGE);
   attachInterrupt(digitalPinToInterrupt(FINETUNE_ENCODER_B), EncoderFineTune, CHANGE);
+#endif
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2)
+  attachInterrupt(digitalPinToInterrupt(PTT), PTT_Interrupt, CHANGE);
+#endif
   attachInterrupt(digitalPinToInterrupt(KEYER_DIT_INPUT_TIP), KeyTipOn, CHANGE);  // Changed to keyTipOn from KeyOn everywhere JJP 8/31/22
   attachInterrupt(digitalPinToInterrupt(KEYER_DAH_INPUT_RING), KeyRingOn, CHANGE);
 
@@ -2140,6 +2211,14 @@ void setup() {
   comp1.setPreGain_dB(-10);  //set the gain of the Left-channel gain processor
   comp2.setPreGain_dB(-10);  //set the gain of the Right-channel gain processor
 
+#ifdef G0ORX_FRONTPANEL
+  FrontPanelInit();
+#endif
+
+#ifdef G0ORX_FRONTPANEL_2
+  FrontPanel2Init();
+#endif
+
   EEPROMData.sdCardPresent = SDPresentCheck();  // JJP 7/18/23
   lastState = 1111;                             // To make sure the receiver will be configured on the first pass through.  KF5N September 3, 2023
   decodeStates = state0;                        // Initialize the Morse decoder.
@@ -2171,14 +2250,23 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
   bool cwKeyDown;
   unsigned long cwBlockIndex;
 
+#ifdef G0ORX_CAT
+  CATSerialEvent();
+#endif
+
   valPin = ReadSelectedPushButton();                     // Poll UI push buttons
   if (valPin != BOGUS_PIN_READ) {                        // If a button was pushed...
     pushButtonSwitchIndex = ProcessButtonPress(valPin);  // Winner, winner...chicken dinner!
     ExecuteButtonPress(pushButtonSwitchIndex);
   }
   //  State detection
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2) || defined (G0ORX_CAT)
+  if (EEPROMData.xmtMode == SSB_MODE && my_ptt == HIGH) radioState = SSB_RECEIVE_STATE;
+  if (EEPROMData.xmtMode == SSB_MODE && my_ptt == LOW) radioState = SSB_TRANSMIT_STATE;
+#else
   if (EEPROMData.xmtMode == SSB_MODE && digitalRead(PTT) == HIGH) radioState = SSB_RECEIVE_STATE;
   if (EEPROMData.xmtMode == SSB_MODE && digitalRead(PTT) == LOW) radioState = SSB_TRANSMIT_STATE;
+#endif
   if (EEPROMData.xmtMode == CW_MODE && (digitalRead(EEPROMData.paddleDit) == HIGH && digitalRead(EEPROMData.paddleDah) == HIGH)) radioState = CW_RECEIVE_STATE;  // Was using symbolic constants. Also changed in code below.  KF5N August 8, 2023
   if (EEPROMData.xmtMode == CW_MODE && (digitalRead(EEPROMData.paddleDit) == LOW && EEPROMData.xmtMode == CW_MODE && EEPROMData.keyType == 0)) radioState = CW_TRANSMIT_STRAIGHT_STATE;
   if (EEPROMData.xmtMode == CW_MODE && (keyPressedOn == 1 && EEPROMData.xmtMode == CW_MODE && EEPROMData.keyType == 1)) radioState = CW_TRANSMIT_KEYER_STATE;
@@ -2244,8 +2332,27 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
       modeSelectOutExR.gain(0, EEPROMData.powerOutSSB[EEPROMData.currentBand]);  //AFP 10-21-22
       ShowTransmitReceiveStatus();
 
+#if (defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2) || defined(G0ORX_CAT))
+      while (my_ptt == LOW) {
+#else
       while (digitalRead(PTT) == LOW) {
+#endif
         ExciterIQData();
+#if (defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
+        ExecuteButtonPress(ProcessButtonPress(ReadSelectedPushButton()));
+#endif
+#ifdef G0ORX_CAT
+        CATSerialEvent();
+#endif
+#ifdef G0ORX_AUDIO_DISPLAY 
+        ShowTXAudio();
+#endif
+#if (defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
+        if (volumeChangeFlag == true) {
+          volumeChangeFlag = false;
+          UpdateVolumeField();
+        }
+#endif
       }
       xrState = RECEIVE_STATE;
       break;
@@ -2319,6 +2426,9 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             }
           }
         }
+#ifdef G0ORX_AUDIO_DISPLAY 
+        ShowTXAudio();
+#endif
       }
       digitalWrite(MUTE, HIGH);   // mutes audio
       modeSelectOutL.gain(1, 0);  // Sidetone off
@@ -2356,7 +2466,9 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             CW_ExciterIQData(CW_SHAPING_NONE);
           }
           CW_ExciterIQData(CW_SHAPING_FALL);
-
+#ifdef G0ORX_AUDIO_DISPLAY 
+          ShowTXAudio();
+#endif
           // Wait for calculated dit time, allowing audio blocks to be played
           while (millis() - ditTimerOn <= transmitDitLength) {
             ;
@@ -2372,7 +2484,10 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
           modeSelectOutExR.gain(0, 0);
           modeSelectOutL.gain(1, 0);  // Sidetone off
           modeSelectOutR.gain(1, 0);
-
+#ifdef G0ORX_AUDIO_DISPLAY
+          arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
+          ShowTXAudio();
+#endif
           cwTimer = millis();
         } else {
           if (digitalRead(EEPROMData.paddleDah) == LOW) {  //Keyer DAH
@@ -2388,7 +2503,9 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
               CW_ExciterIQData(CW_SHAPING_NONE);
             }
             CW_ExciterIQData(CW_SHAPING_FALL);
-
+#ifdef G0ORX_AUDIO_DISPLAY 
+              ShowTXAudio();
+#endif
             // Wait for calculated dah time, allowing audio blocks to be played
             while (millis() - dahTimerOn <= 3UL * transmitDitLength) {
               ;
@@ -2404,7 +2521,10 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             modeSelectOutExR.gain(0, 0);
             modeSelectOutL.gain(1, 0);  // Sidetone off
             modeSelectOutR.gain(1, 0);
-
+#ifdef G0ORX_AUDIO_DISPLAY
+            arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
+            ShowTXAudio();
+#endif
             cwTimer = millis();
           }
         }

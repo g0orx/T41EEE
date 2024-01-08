@@ -102,6 +102,9 @@ FLASHMEM void SetFavoriteFrequency() {
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
   tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
   tft.print(EEPROMData.favoriteFreqs[index]);
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag=1;
+#endif
   while (true) {
     if (filterEncoderMove != 0) {  // Changed encoder?
       index += filterEncoderMove;  // Yep
@@ -136,6 +139,9 @@ FLASHMEM void SetFavoriteFrequency() {
       ShowBandwidth();
       FilterBandwidth();
       ShowFrequency();
+#ifdef G0ORX_FRONTPANEL_2
+      calibrateFlag=0;
+#endif
       break;
     }
   }
@@ -159,6 +165,9 @@ FLASHMEM void GetFavoriteFrequency() {
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
   tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
   tft.print(EEPROMData.favoriteFreqs[index]);
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag=1;
+#endif
   while (true) {
     if (filterEncoderMove != 0) {  // Changed encoder?
       index += filterEncoderMove;  // Yep
@@ -242,6 +251,9 @@ FLASHMEM void GetFavoriteFrequency() {
       ShowSpectrumdBScale();
       ShowSpectrum();
       //bands[currentBand].mode = currentBand;
+#ifdef G0ORX_FRONTPANEL_2
+      calibrateFlag=0;
+#endif
       return;
     }
   }
@@ -304,7 +316,9 @@ FLASHMEM void EEPROMStartup() {
   // If the flow proceeds here, it is time to initialize some things.
   // The rest of the code will require a switch matrix calibration, and will write the EEPROMData struct to EEPROM.
 
+#if !(defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
   SaveAnalogSwitchValues();          // Calibrate the switch matrix.
+#endif
   EEPROMWriteSize(stackStructSize);  // Write the size of the struct to EEPROM.
 
   //Serial.printf("eempromStructSize = %d\n", EEPROMReadSize());

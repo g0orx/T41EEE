@@ -122,6 +122,9 @@ void EnableButtonInterrupts() {
     int                   -1 if not valid push button, index of push button if valid
 *****/
 int ProcessButtonPress(int valPin) {
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2)
+  return valPin;
+#else
   int switchIndex;
 
   if (valPin == BOGUS_PIN_READ) {  // Not valid press
@@ -141,6 +144,7 @@ int ProcessButtonPress(int valPin) {
   }
 
   return -1;  // Really should never do this
+#endif
 }
 
 /*****
@@ -153,6 +157,16 @@ int ProcessButtonPress(int valPin) {
     int                   -1 if not valid push button, ADC value if valid
 *****/
 int ReadSelectedPushButton() {
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2)
+  __disable_irq();
+#ifdef G0ORX_FRONTPANEL_2
+  getKeypad();
+#endif
+  int i=G0ORXButtonPressed;
+  G0ORXButtonPressed=-1;
+  __enable_irq();
+  return i;
+#else
   minPinRead = 0;
   int buttonReadOld = 1023;
 
@@ -185,6 +199,7 @@ int ReadSelectedPushButton() {
     MyDelay(100L);
   }
   return minPinRead;
+#endif
 }
 
 /*****
@@ -314,12 +329,70 @@ void ExecuteButtonPress(int val) {
       break;            // AFP 10-11-22
 
     case UNUSED_1:  // 16
+#ifdef G0ORX_VFO
+      // Copy VFOA to VFOB
+      EEPROMData.currentFreqB = EEPROMData.currentFreqA;
+      EEPROMData.currentBandB = EEPROMData.currentBandA;
+      if(EEPROMData.activeVFO == VFO_A) {
+        ShowFrequency();
+      } else {
+        NCOFreq = 0L;
+        EEPROMData.centerFreq = TxRxFreq = EEPROMData.currentFreqB;
+        SetBand();           // KF5N July 12, 2023
+        SetBandRelay(HIGH);  // Required when switching VFOs. KF5N July 12, 2023
+        SetFreq();
+        RedrawDisplayScreen();
+        BandInformation();
+        ShowBandwidth();
+        FilterBandwidth();
+
+        tft.fillRect(FREQUENCY_X_SPLIT, FREQUENCY_Y - 12, VFOB_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK);  // delete old digit
+        tft.fillRect(FREQUENCY_X, FREQUENCY_Y - 12, VFOA_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK);        // delete old digit  tft.setFontScale( (enum RA8875tsize) 0);
+        ShowFrequency();
+        // Draw or not draw CW filter graphics to audio spectrum area.  KF5N July 30, 2023
+        tft.writeTo(L2);
+        tft.clearMemory();
+        if (EEPROMData.xmtMode == CW_MODE) BandInformation();
+        DrawBandWidthIndicatorBar();
+        DrawFrequencyBarValue();
+      }
+#else
       if (calOnFlag == 0) {
         ButtonFrequencyEntry();
       }
+#endif
       break;
 
-    case BEARING:  // 17  // AFP 10-11-22
+    case BEARING:  // 17  // AFP 10-11-22#ifdef G0ORX_VFO
+#ifdef G0ORX_VFO
+      // Copy VFOB to VFOA
+      EEPROMData.currentFreqA = EEPROMData.currentFreqB;
+      EEPROMData.currentBandA = EEPROMData.currentBandB;
+      if(EEPROMData.activeVFO == VFO_B) {
+        // just need to update display
+        ShowFrequency();
+      } else {
+        NCOFreq = 0L;
+        EEPROMData.centerFreq = TxRxFreq = EEPROMData.currentFreqA;
+        SetBand();           // KF5N July 12, 2023
+        SetBandRelay(HIGH);  // Required when switching VFOs. KF5N July 12, 2023
+        SetFreq();
+        RedrawDisplayScreen();
+        BandInformation();
+        ShowBandwidth();
+        FilterBandwidth();
+
+        tft.fillRect(FREQUENCY_X_SPLIT, FREQUENCY_Y - 12, VFOB_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK);  // delete old digit
+        tft.fillRect(FREQUENCY_X, FREQUENCY_Y - 12, VFOA_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK);        // delete old digit  tft.setFontScale( (enum RA8875tsize) 0);
+        ShowFrequency();
+        // Draw or not draw CW filter graphics to audio spectrum area.  KF5N July 30, 2023
+        tft.writeTo(L2);
+        tft.clearMemory();
+        if (EEPROMData.xmtMode == CW_MODE) BandInformation();
+        DrawBandWidthIndicatorBar();
+        DrawFrequencyBarValue();
+      }
+#else
       int buttonIndex, doneViewing, valPin;
       float retVal;
 
@@ -363,8 +436,116 @@ void ExecuteButtonPress(int val) {
       RedrawDisplayScreen();
       ShowFrequency();
       DrawFrequencyBarValue();
-
+#endif
       break;
+#if (defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
+    case 18:                                                      // 18 - Encoder 1 SW (Volume)
+      switch(volumeFunction) {
+        case AUDIO_VOLUME:
+          volumeFunction=AGC_GAIN;
+          break;
+        case AGC_GAIN:
+          volumeFunction=MIC_GAIN;
+          break;
+        case MIC_GAIN:
+          volumeFunction=SIDETONE_VOLUME;
+          break;
+        case SIDETONE_VOLUME:
+          volumeFunction=NOISE_FLOOR_LEVEL;
+          break;
+        case NOISE_FLOOR_LEVEL:
+          volumeFunction=AUDIO_VOLUME;
+          break;
+      }
+      volumeChangeFlag = true;
+      break;
+
+    case 19:                                                      // 19 - Encoder 2 SW (Filter/Menu)
+      // Temp use to step through AGC
+      EEPROMData.AGCMode++;
+      if(EEPROMData.AGCMode>4) {
+        EEPROMData.AGCMode = 0;
+      }
+
+      AGCLoadValues();
+
+      //EEPROMData.AGCMode = AGCMode;                               // Store in EEPROM and...
+      EEPROM.put(EEPROM_BASE_ADDRESS, EEPROMData);                // ...save it
+      UpdateAGCField();
+      break;
+
+    case 20:                                                      // 20 - Encoder 3 SW (Center Tune)
+      // switch between VFO-A and VFO-B
+      if (EEPROMData.activeVFO == VFO_A) {
+        EEPROMData.centerFreq = TxRxFreq = EEPROMData.currentFreqB;
+        EEPROMData.activeVFO = VFO_B;
+        EEPROMData.currentBand = EEPROMData.currentBandB;
+        tft.fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);      // Erase split message
+        splitOn = 0;
+      } else { // Must be VFO-B
+        EEPROMData.centerFreq = TxRxFreq = EEPROMData.currentFreqA;
+        EEPROMData.activeVFO = VFO_A;
+        EEPROMData.currentBand = EEPROMData.currentBandA;
+        tft.fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);      // Erase split message
+        splitOn = 0;
+      }
+      bands[EEPROMData.currentBand].freq = TxRxFreq;
+      SetBand();  // KF5N July 12, 2023
+      SetBandRelay(HIGH);  // Required when switching VFOs. KF5N July 12, 2023
+      SetFreq();
+      RedrawDisplayScreen();
+      BandInformation();
+      ShowBandwidth();
+      FilterBandwidth();
+      //EEPROMData.activeVFO = activeVFO;
+
+      tft.fillRect(FREQUENCY_X_SPLIT, FREQUENCY_Y - 12, VFOB_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK); // delete old digit
+      tft.fillRect(FREQUENCY_X,       FREQUENCY_Y - 12, VFOA_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK); // delete old digit  tft.setFontScale( (enum RA8875tsize) 0);
+      ShowFrequency();
+      // Draw or not draw CW filter graphics to audio spectrum area.  KF5N July 30, 2023
+      tft.writeTo(L2);
+      tft.clearMemory();
+      if(EEPROMData.xmtMode == CW_MODE) BandInformation();
+      DrawBandWidthIndicatorBar();
+      DrawFrequencyBarValue();
+      break;
+
+    case 21:                                                      // 21 - Encoder 4 SW (Fine Tune)
+      // swap VFO A and B
+      long tempFreq = EEPROMData.currentFreqA;
+      int tempBand = EEPROMData.currentBandA;
+      EEPROMData.currentFreqA = EEPROMData.currentFreqB;
+      EEPROMData.currentBandA = EEPROMData.currentBandB;
+      EEPROMData.currentFreqB = tempFreq;
+      EEPROMData.currentBandB = tempBand;
+      if (EEPROMData.activeVFO == VFO_A) {
+        EEPROMData.centerFreq = TxRxFreq = EEPROMData.currentFreqA;
+        EEPROMData.currentBand = EEPROMData.currentBandA;
+      } else { // must be VFO-B
+        EEPROMData.centerFreq = TxRxFreq = EEPROMData.currentFreqB;
+        EEPROMData.currentBand = EEPROMData.currentBandB;
+      }
+      bands[EEPROMData.currentBand].freq = TxRxFreq;
+      SetBand();  // KF5N July 12, 2023
+      SetBandRelay(HIGH);  // Required when switching VFOs. KF5N July 12, 2023
+      SetFreq();
+      RedrawDisplayScreen();
+      BandInformation();
+      ShowBandwidth();
+      FilterBandwidth();
+      //EEPROMData.activeVFO = activeVFO;
+
+      tft.fillRect(FREQUENCY_X_SPLIT, FREQUENCY_Y - 12, VFOB_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK); // delete old digit
+      tft.fillRect(FREQUENCY_X,       FREQUENCY_Y - 12, VFOA_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK); // delete old digit  tft.setFontScale( (enum RA8875tsize) 0);
+      ShowFrequency();
+      // Draw or not draw CW filter graphics to audio spectrum area.  KF5N July 30, 2023
+      tft.writeTo(L2);
+      tft.clearMemory();
+      if(EEPROMData.xmtMode == CW_MODE) BandInformation();
+      DrawBandWidthIndicatorBar();
+      DrawFrequencyBarValue();
+      break;
+#endif
   }
 }
 

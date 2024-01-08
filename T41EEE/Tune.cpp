@@ -152,7 +152,9 @@ int DoSplitVFO()
   tft.setCursor(INFORMATION_WINDOW_X + 60, INFORMATION_WINDOW_Y + 90);
   tft.print(splitOffset);
   tft.print("Hz  ");
-
+#ifdef G0ORX_FRONTPANEL_2 
+  calibrateFlag=1;
+#endif
   while (true) {
     if (filterEncoderMove != 0) {                     // Changed encoder?
       splitOffset += filterEncoderMove * chunk;
@@ -173,6 +175,9 @@ int DoSplitVFO()
       break;
     }
   }
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag=0;
+#endif
   EEPROMData.currentFreqB = EEPROMData.currentFreqA + splitOffset;
   FormatFrequency(EEPROMData.currentFreqB, freqBuffer);
   tft.fillRect(FREQUENCY_X_SPLIT, FREQUENCY_Y - 12, VFOB_PIXEL_LENGTH, FREQUENCY_PIXEL_HI, RA8875_BLACK);

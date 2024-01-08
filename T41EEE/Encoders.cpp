@@ -82,7 +82,7 @@ void FilterSetSSB() {
     tft.writeTo(L1);  // Exit function in layer 1.  KF5N August 3, 2023
 }
 
-
+#ifndef G0ORX_FRONTPANEL_2
 /*****
   Purpose: EncoderCenterTune.  This is "coarse" tuning.
   Parameter list:
@@ -94,7 +94,11 @@ void EncoderCenterTune() {
   long tuneChange = 0L;
   //  long oldFreq    = EEPROMData.centerFreq;
 
+#ifdef G0ORX_FRONTPANEL
+  int result = tuneEncoder.process();  // Read the encoder
+#else
   unsigned char result = tuneEncoder.process();  // Read the encoder
+#endif
 
   if (result == 0)  // Nothing read
     return;
@@ -102,7 +106,9 @@ void EncoderCenterTune() {
   if (EEPROMData.xmtMode == CW_MODE && EEPROMData.decoderFlag == DECODE_ON) {  // No reason to reset if we're not doing decoded CW AFP 09-27-22
     ResetHistograms();
   }
-
+#ifdef G0ORX_FRONTPANEL
+  tuneChange = result;
+#else
   switch (result) {
     case DIR_CW:  // Turned it clockwise, 16
       tuneChange = 1L;
@@ -112,7 +118,7 @@ void EncoderCenterTune() {
       tuneChange = -1L;
       break;
   }
-
+#endif
   EEPROMData.centerFreq += ((long)EEPROMData.freqIncrement * tuneChange);  // tune the master vfo
   TxRxFreq = EEPROMData.centerFreq + NCOFreq;
   EEPROMData.lastFrequencies[EEPROMData.currentBand][EEPROMData.activeVFO] = TxRxFreq;
@@ -136,7 +142,11 @@ void EncoderCenterTune() {
 *****/
 void EncoderVolume()  //============================== AFP 10-22-22  Begin new
 {
+#ifdef G0ORX_FRONTPANEL
+  int result;
+#else
   char result;
+#endif 
   int increment [[maybe_unused]] = 0;
 
   result = volumeEncoder.process();  // Read the encoder
@@ -144,6 +154,9 @@ void EncoderVolume()  //============================== AFP 10-22-22  Begin new
   if (result == 0) {  // Nothing read
     return;
   }
+#ifdef G0ORX_FRONTPANEL
+  adjustVolEncoder = result;
+#else
   switch (result) {
     case DIR_CW:  // Turned it clockwise, 16
       adjustVolEncoder = 1;
@@ -153,6 +166,63 @@ void EncoderVolume()  //============================== AFP 10-22-22  Begin new
       adjustVolEncoder = -1;
       break;
   }
+#endif
+#ifdef G0ORX_FRONTPANEL
+  switch(volumeFunction) {
+    case AUDIO_VOLUME:
+      EEPROMData.audioVolume += adjustVolEncoder;
+
+      if (EEPROMData.audioVolume > 100) {  // In range?
+        EEPROMData.audioVolume = 100;
+      } else {
+        if (EEPROMData.audioVolume < 0) {
+          EEPROMData.audioVolume = 0;
+        }
+      }
+      break;
+    case AGC_GAIN:
+      bands[EEPROMData.currentBand].AGC_thresh += adjustVolEncoder;
+      if(bands[EEPROMData.currentBand].AGC_thresh < -20) {
+        bands[EEPROMData.currentBand].AGC_thresh = -20;
+      } else if(bands[EEPROMData.currentBand].AGC_thresh > 120) {
+        bands[EEPROMData.currentBand].AGC_thresh = 120;
+      }
+      AGCLoadValues();
+      break;
+    case MIC_GAIN:
+      EEPROMData.currentMicGain += adjustVolEncoder;
+      if(EEPROMData.currentMicGain < -40) {
+        EEPROMData.currentMicGain = -40;
+      } else if(EEPROMData.currentMicGain > 30) {
+        EEPROMData.currentMicGain = 30;
+      }
+      if(radioState == SSB_TRANSMIT_STATE ) {
+        comp1.setPreGain_dB(EEPROMData.currentMicGain);
+        comp2.setPreGain_dB(EEPROMData.currentMicGain);
+      }
+      break;
+    case SIDETONE_VOLUME:
+      EEPROMData.sidetoneVolume += adjustVolEncoder;
+      if(EEPROMData.sidetoneVolume < 0.0 ) {
+        EEPROMData.sidetoneVolume = 0.0;
+      } else if(EEPROMData.sidetoneVolume > 100.0) {
+        EEPROMData.sidetoneVolume = 100.0;
+      }
+      if(radioState == CW_TRANSMIT_STRAIGHT_STATE || radioState == CW_TRANSMIT_KEYER_STATE) {
+        modeSelectOutL.gain(1, EEPROMData.sidetoneVolume/100.0);
+        modeSelectOutR.gain(1, EEPROMData.sidetoneVolume/100.0);
+      }
+      break;
+    case NOISE_FLOOR_LEVEL:
+      EEPROMData.currentNoiseFloor[EEPROMData.currentBand] += adjustVolEncoder;
+      if(EEPROMData.currentNoiseFloor[EEPROMData.currentBand]<0) {
+        EEPROMData.currentNoiseFloor[EEPROMData.currentBand]=0;
+      } else if(EEPROMData.currentNoiseFloor[EEPROMData.currentBand]>100) {
+        EEPROMData.currentNoiseFloor[EEPROMData.currentBand]=100;
+      }
+      break;
+  }
+#else
   EEPROMData.audioVolume += adjustVolEncoder; 
   // simulate log taper.  As we go higher in volume, the increment increases.
 
@@ -171,11 +241,12 @@ void EncoderVolume()  //============================== AFP 10-22-22  Begin new
     if (EEPROMData.audioVolume < 0) 
       EEPROMData.audioVolume = 0;
   }
+#endif
 
   volumeChangeFlag = true;  // Need this because of unknown timing in display updating.
 
 }  //============================== AFP 10-22-22  End new
-
+#endif
 
 /*****
   Purpose: Use the encoder to change the value of a number in some other function
@@ -297,7 +368,9 @@ int SetWPM() {
   tft.print("current WPM:");
   tft.setCursor(SECONDARY_MENU_X + 200, MENUS_Y + 1);
   tft.print(EEPROMData.currentWPM);
-
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag = 1; 
+#endif
   while (true) {
     if (filterEncoderMove != 0) {       // Changed encoder?
       EEPROMData.currentWPM += filterEncoderMove;  // Yep
@@ -324,6 +397,9 @@ int SetWPM() {
   }
   tft.setTextColor(RA8875_WHITE);
   EraseMenus();
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag = 0;
+#endif
   return EEPROMData.currentWPM;
 }
 
@@ -350,7 +426,9 @@ long SetTransmitDelay()  // new function JJP 9/1/22
   tft.print("current delay:");
   tft.setCursor(SECONDARY_MENU_X + 79, MENUS_Y + 1);
   tft.print(EEPROMData.cwTransmitDelay);
-
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag = 1;
+#endif
   while (true) {
     if (filterEncoderMove != 0) {                  // Changed encoder?
       lastDelay += filterEncoderMove * increment;  // Yep
@@ -375,8 +453,13 @@ long SetTransmitDelay()  // new function JJP 9/1/22
   }
   tft.setTextColor(RA8875_WHITE);
   EraseMenus();
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag = 0;
+#endif
   return EEPROMData.cwTransmitDelay;
 }
+
+#ifndef G0ORX_FRONTPANEL_2
 /*****
   Purpose: Fine tune control.
 
@@ -389,18 +472,26 @@ long SetTransmitDelay()  // new function JJP 9/1/22
 FASTRUN  // Causes function to be allocated in RAM1 at startup for fastest performance.
   void
   EncoderFineTune() {
+#ifdef G0ORX_FRONTPANEL
+  int result;
+#else
   char result;
+#endif
 
   result = fineTuneEncoder.process();  // Read the encoder
   if (result == 0) {                   // Nothing read
     fineTuneEncoderMove = 0L;
     return;
   } else {
+#ifdef G0ORX_FRONTPANEL
+    fineTuneEncoderMove=result;
+#else
     if (result == DIR_CW) {  // 16 = CW, 32 = CCW
       fineTuneEncoderMove = 1L;
     } else {
       fineTuneEncoderMove = -1L;
     }
+#endif
   }
   NCOFreq += EEPROMData.stepFineTune * fineTuneEncoderMove;  //AFP 11-01-22
   centerTuneFlag = 1;
@@ -433,14 +524,20 @@ FASTRUN  // Causes function to be allocated in RAM1 at startup for fastest perfo
 
 FASTRUN  // Causes function to be allocated in RAM1 at startup for fastest performance.
   void EncoderFilter() {
+#ifdef G0ORX_FRONTPANEL
+  int result;
+#else
   char result;
+#endif
   result = filterEncoder.process();  // Read the encoder
 
   if (result == 0) {
     //    filterEncoderMove = 0;// Nothing read
     return;
   }
-
+#ifdef G0ORX_FRONTPANEL
+  filterEncoderMove = result;
+#else
   switch (result) {
     case DIR_CW:  // Turned it clockwise, 16
       filterEncoderMove = 1;
@@ -452,7 +549,9 @@ FASTRUN  // Causes function to be allocated in RAM1 at startup for fastest perfo
       // filter_pos = last_filter_pos - 5 * filterEncoderMove;   // AFP 10-22-22
       break;
   }
+#endif
   if (calibrateFlag == 0) {                                // AFP 10-22-22
     filter_pos = last_filter_pos - 5 * filterEncoderMove;  // AFP 10-22-22
   }                                                        // AFP 10-22-22
 }
+#endif

@@ -663,6 +663,14 @@ void SetBand() {
   FilterBandwidth();
 }
 
+// G0ORX - Split code out ot allow use from other code
+void ShowMessageOnWaterfall(String message) {
+  tft.setFontScale((enum RA8875tsize) 1);
+  tft.setForegroundColor(RA8875_RED);
+  tft.setCursor(20, 300); 
+  tft.print(message);
+  tft.setForegroundColor(RA8875_WHITE);
+} 
 
 /*****
   Purpose: Tries to open the EEPROM SD file to see if an SD card is present in the system
@@ -675,12 +683,7 @@ void SetBand() {
 *****/
 int SDPresentCheck() {
   if (!SD.begin(chipSelect)) {
-    Serial.print("No SD card or cannot be initialized.");
-    tft.setFontScale((enum RA8875tsize)1);
-    tft.setForegroundColor(RA8875_RED);
-    tft.setCursor(20, 300);
-    tft.print("No SD card or not initialized.");
-    tft.setForegroundColor(RA8875_WHITE);
+    ShowMessageOnWaterfall("No SD card.");
     return 0;
   }
   // open the file.
@@ -692,3 +695,31 @@ int SDPresentCheck() {
     return 0;
   }
 }
+
+#ifdef G0ORX_CAT
+/*****
+  Purpose: change band from frequency
+  Paramter list:
+    long frequency
+  Return value:
+    int band
+*****/
+int ChangeBand(long f, bool updateRelays) {
+  int b;
+  for(b=FIRST_BAND;b<=LAST_BAND;b++) {
+    if(f<=bands[b].fBandHigh) {
+      break;
+    }
+  }
+  if(b>LAST_BAND) {
+    b=LAST_BAND;
+  }
+
+  if(updateRelays && b!=EEPROMData.currentBand) {
+    digitalWrite(bandswitchPins[EEPROMData.currentBand], LOW);
+    digitalWrite(bandswitchPins[b], HIGH);
+  }
+
+  return b;
+}
+#endif

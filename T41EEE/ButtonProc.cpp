@@ -350,7 +350,9 @@ void ButtonMode()  //====== Changed AFP 10-05-22  =================
   DisplayIncrementField();
   AGCPrep();
   UpdateAGCField();
+#ifndef G0ORX_FRONTPANEL_2
   EncoderVolume();
+#endif
   UpdateInfoWindow();
   ControlFilterF();
   BandInformation();
@@ -428,7 +430,9 @@ int ButtonSetNoiseFloor() {
   tft.setCursor(SECONDARY_MENU_X + 200, MENUS_Y + 1);
   tft.print(EEPROMData.currentNoiseFloor[EEPROMData.currentBand]);
   MyDelay(150L);
-
+#ifdef G0ORX_FRONTPANEL_2
+  calibrateFlag=1;
+#endif
   while (true) {
     if (filterEncoderMove != 0) {
       floor += filterEncoderMove;  // It moves the display
@@ -466,6 +470,9 @@ int ButtonSetNoiseFloor() {
       //      EEPROMData.spectrumNoiseFloor              = floor;
       EEPROMData.currentNoiseFloor[EEPROMData.currentBand] = floor;
       EEPROMWrite();
+#ifdef G0ORX_FRONTPANEL_2
+      calibrateFlag=0;
+#endif
       break;
     }
   }

@@ -363,6 +363,9 @@ void ProcessEqualizerChoices(int EQType, char *title) {
                  barWidth,                          // Set bar width
                  yLevel[columnIndex],               // Draw new bar
                  RA8875_MAGENTA);
+#ifdef G0ORX_FRONTPANEL_2
+    calibrateFlag=1;
+#endif
     while (true) {
       newValue = yLevel[columnIndex];  // Get current value
       if (filterEncoderMove != 0) {
@@ -390,6 +393,9 @@ void ProcessEqualizerChoices(int EQType, char *title) {
         }
       }
       filterEncoderMove = 0;
+#ifdef G0ORX_FRONTPANEL_2
+      calibrateFlag=0;
+#endif
       MyDelay(200L);
 
       val = ReadSelectedPushButton();  // Read the ladder value
@@ -519,6 +525,9 @@ int MicGainSet() {
       tft.print("Mic Gain:");
       tft.setCursor(SECONDARY_MENU_X + 180, MENUS_Y + 1);
       tft.print(EEPROMData.currentMicGain);
+#ifdef G0ORX_FRONTPANEL_2
+      calibrateFlag=1;
+#endif
       while (true) {
         if (filterEncoderMove != 0) {
           EEPROMData.currentMicGain += ((float)filterEncoderMove);
@@ -537,6 +546,9 @@ int MicGainSet() {
         if (val == MENU_OPTION_SELECT) {  // Make a choice??
                                           //         EEPROMData.EEPROMData.currentMicGain = EEPROMData.currentMicGain;
           EEPROMWrite();
+#ifdef G0ORX_FRONTPANEL_2
+          calibrateFlag=0;
+#endif
           break;
         }
       }

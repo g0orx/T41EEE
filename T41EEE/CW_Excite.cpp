@@ -59,6 +59,10 @@ void CW_ExciterIQData(int shaping) //AFP 08-20-22
             Additional scaling, if nesessary to compensate for down-stream gain variations
    **********************************************************************************/
 
+#ifdef G0ORX_AUDIO_DISPLAY
+    arm_copy_f32 (float_buffer_L_EX, mic_audio_buffer, 256);
+#endif
+
   //============================== AFP 10-21-22  Begin new
 
   if (bands[EEPROMData.currentBand].mode == DEMOD_LSB) {

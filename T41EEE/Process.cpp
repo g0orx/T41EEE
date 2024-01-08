@@ -61,6 +61,9 @@ void ProcessIQData()
     if (centerTuneFlag == 1) { //AFP 10-04-22
       DrawBandWidthIndicatorBar();
       ShowFrequency();
+#if defined(G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2)
+      SetFreq();
+#endif
     }                       //AFP 10-04-22
     centerTuneFlag = 0;     //AFP 10-04-22
     if (resetTuningFlag == 1) {
