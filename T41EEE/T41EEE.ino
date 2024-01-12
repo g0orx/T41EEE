@@ -2305,6 +2305,9 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
         if (keyPressedOn == 1) {
           return;
         }
+#ifdef G0ORX_AUDIO_DISPLAY
+        DrawAudioSpectContainer();
+#endif
         ShowTransmitReceiveStatus();
       }
       ShowSpectrum();
@@ -2356,6 +2359,9 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
         }
 #endif
       }
+#ifdef G0ORX_AUDIO_DISPLAY
+      DrawAudioSpectContainer();
+#endif
       xrState = RECEIVE_STATE;
       break;
     default:
@@ -2487,7 +2493,6 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
           modeSelectOutL.gain(1, 0);  // Sidetone off
           modeSelectOutR.gain(1, 0);
 #ifdef G0ORX_AUDIO_DISPLAY
-          arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
           ShowTXAudio();
 #endif
           cwTimer = millis();
@@ -2524,7 +2529,6 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             modeSelectOutL.gain(1, 0);  // Sidetone off
             modeSelectOutR.gain(1, 0);
 #ifdef G0ORX_AUDIO_DISPLAY
-            arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
             ShowTXAudio();
 #endif
             cwTimer = millis();

@@ -1678,7 +1678,7 @@ void UpdateSDIndicator(int present) {
 static float32_t audio_sample[256];
 
 void ShowTXAudio() {
-    int x;
+    int x, y1, y2;
 
     float32_t max_sample=mic_audio_buffer[0];
     float32_t min_sample=mic_audio_buffer[0];
