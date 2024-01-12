@@ -54,6 +54,17 @@ Thank you to Jonathan KN6LFB for the major improvement in button functionality!
     on each button in the proper series will rapidly complete the process.
 5.  EEPROM start-up code is significantly revised.
 
+## Additions by John Melton G0ORX
+
+1.  Support for G0ORX MCP23017 Front Panel.
+2.  Support for G0ORX RPi Pico Front Panel.
+3.  Subset of Kenwood TS-2000 CAT Interface over USB Serial port.
+4.  Display simple Audio display when transmitting.
+5.  VFO - User1 copy VFO-A to VFO-B. User2 copy VFO-B to VFO-A
+6.  Tune Encoder switch - change between VFO-A and VFO-B.
+7.  Volume Encoder Switch - change encoder function between Volume, Mic Gain, AGC Gain, Sidetone Volume and Noise Floor level.
+8.  Filter Encoder Switch - rotate through AGC Modes
+9.  Fine Tune Encoder Switch - swap VFO-A and VFO-B
 
 *********************************************************************************************
 
