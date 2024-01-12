@@ -1633,6 +1633,9 @@ void ShowTransmitReceiveStatus() {
     FrontPanelSetLed(0,1);
     FrontPanelSetLed(1,0);
 #endif
+#ifdef G0ORX_AUDIO_DISPLAY
+    ClearTXAudio();
+#endif
   } else {
     tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_GREEN);
     tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y - 5);
@@ -1672,38 +1675,40 @@ void UpdateSDIndicator(int present) {
 }
 
 #ifdef G0ORX_AUDIO_DISPLAY
+static float32_t audio_sample[256];
+
 void ShowTXAudio() {
-    static int update_display=0;
-    int p, v;
-  
-    // only update the displayevery 4th time 
-    if(update_display==0) {
-      switch(radioState) {
-        case SSB_TRANSMIT_STATE: 
-          arm_scale_f32 (mic_audio_buffer, 100000.0, mic_audio_buffer, 256);  // scale up to get a reasonable plot
-          break;
-        case CW_TRANSMIT_STRAIGHT_STATE:
-        case CW_TRANSMIT_KEYER_STATE:
-          arm_scale_f32 (mic_audio_buffer, 200.0, mic_audio_buffer, 256);  // scale up to get a reasonable plot
-          break;
-      }
-      tft.fillRect(BAND_INDICATOR_X - 8, AUDIO_SPECTRUM_TOP + 1, 252, 116, RA8875_BLACK);
-      for (int i = 0; i < 252; i++) {
-        v = 188 - int(mic_audio_buffer[i]); // align around the center of the display area
-        if(v>245) v=245;
-        if(v<130) v=130;
-        if(i>0) {
-          int x1 = BAND_INDICATOR_X - 8 + (i - 1);
-          int y1 = p;
-          int x2 = BAND_INDICATOR_X - 8 + i;
-          int y2 = v;
-          tft.drawLine(x1, y1, x2, y2, RA8875_YELLOW);
-        }
-        p=v;
-      }
-      update_display=4;
-    } else {
-      update_display--;
+    int x;
+
+    float32_t max_sample=mic_audio_buffer[0];
+    float32_t min_sample=mic_audio_buffer[0];
+
+
+    for(int i=1;i<256;i++) {
+      if(mic_audio_buffer[i]>max_sample) max_sample=mic_audio_buffer[i];
+      if(mic_audio_buffer[i]<min_sample) min_sample=mic_audio_buffer[i];
     }
+    //Serial.println("max_sample="+String(max_sample)+" min_sample="+String(min_sample));
+
+    //scroll left
+    for(int i=0;i<251;i++) {
+      x = BAND_INDICATOR_X - 8 + i;
+      tft.drawLine(x, 188+audio_sample[i], x, 188-audio_sample[i], RA8875_BLACK);
+      audio_sample[i]=audio_sample[i+1];
+      tft.drawLine(x, 188+audio_sample[i], x, 188-audio_sample[i], RA8875_YELLOW);
+    }
+    x = BAND_INDICATOR_X - 8 + 251;
+    tft.drawLine(x, 188+audio_sample[251], x, 188-audio_sample[251], RA8875_BLACK);
+    audio_sample[251]=max_sample * 100;
+    tft.drawLine(x, 188+audio_sample[251], x, 188-audio_sample[251], RA8875_YELLOW);
+
+}
+
+void ClearTXAudio() {
+  tft.fillRect(BAND_INDICATOR_X - 8, AUDIO_SPECTRUM_TOP + 1, 252, 116, RA8875_BLACK);
+  for(int i=1;i<256;i++) {
+    audio_sample[i]=0.0;
+  }
 }
 #endif
+

@@ -6,8 +6,8 @@
 // G0ORX_FRONTPANEL and G0ORX_FRONTPANEL2 are mutually exclusive  (only enable 1 of them if at all)
 // G0ORX_FRONTPANEL is the MCP23017 front panel for the encoders and push buttons
 // G0ORX_FRONTPANEL_2 is the Raspberry Pi Pico front panel
-#define G0ORX_FRONTPANEL
-//#define G0ORX_FRONTPANEL_2
+//#define G0ORX_FRONTPANEL
+#define G0ORX_FRONTPANEL_2
 
 #if (defined(G0ORX_FRONTPANEL) && defined(G0ORX_FRONTPANEL_2))
 #error Only G0ORX_FRONTPANEL OR G0ORX_FRONTPANEL_2 can be defined (not both)
@@ -27,6 +27,9 @@
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
 extern uint8_t my_mac[];
+extern bool network_initialized;
+bool Ethernet_init();
+void EthernetEvent();
 #endif
 
 //======================================== User section that might need to be changed ===================================
@@ -2248,6 +2251,7 @@ int SpectrumOptions();
 #ifdef G0ORX_AUDIO_DISPLAY
  extern float32_t mic_audio_buffer[];
  void ShowTXAudio();
+ void ClearTXAudio();
 #endif
 
 void TurnOffInitializingMessage();

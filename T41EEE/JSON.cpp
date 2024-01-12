@@ -120,7 +120,6 @@ FLASHMEM void saveConfiguration(const char *filename, const config_t &EEPROMData
   // Use https://arduinojson.org/assistant to compute the capacity.
   //StaticJsonDocument<256> doc;  // This uses the stack.
   DynamicJsonDocument doc(7000);  // This uses the heap.
-
   // Set the values in the document
   doc["versionSettings"] = EEPROMData.versionSettings;
   doc["myCall"] = EEPROMData.myCall;

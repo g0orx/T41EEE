@@ -99,6 +99,7 @@ int touchSecondaryMenuIndex = -1;
 uint8_t my_mac[] = {
   0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x02
 };
+bool network_initialized = false;
 #endif
 
 const char *filename = "/config.txt";  // <- SD library uses 8.3 filenames
@@ -2015,21 +2016,14 @@ void setup() {
 
   Serial.begin(9600);
 
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
   setSyncProvider(getTeensy3Time);  // get TIME from real time clock with 3V backup battery
   setTime(now());
   Teensy3Clock.set(now());  // set the RTC
   T4_rtc_set(Teensy3Clock.get());
-
-  #ifdef NETWORK
-  if (Ethernet.begin(my_mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
-    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-      Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-    } else if (Ethernet.linkStatus() == LinkOFF) {
-      Serial.println("Ethernet cable is not connected.");
-    }
-  }
-#endif
 
   sgtl5000_1.setAddress(LOW);
   sgtl5000_1.enable();
@@ -2123,6 +2117,10 @@ void setup() {
   Splash();
 
   EEPROMData.sdCardPresent = InitializeSDCard();  // Is there an SD card that can be initialized?
+
+#ifdef NETWORK
+  network_initialized=Ethernet_init();
+#endif
 
   // =============== EEPROM section =================
   EnableButtonInterrupts();
@@ -2252,6 +2250,10 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
 
 #ifdef G0ORX_CAT
   CATSerialEvent();
+#endif
+
+#ifdef NETWORK
+  EthernetEvent();
 #endif
 
   valPin = ReadSelectedPushButton();                     // Poll UI push buttons
