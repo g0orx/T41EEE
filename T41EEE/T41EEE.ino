@@ -2431,6 +2431,7 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             if (cwKeyDown) {
               CW_ExciterIQData(CW_SHAPING_FALL);
               cwKeyDown = false;
+              arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
             }
           }
         }
@@ -2470,8 +2471,14 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
           // Queue audio blocks--execution time of this loop will be between 0-20ms shorter
           // than the desired dit time, due to audio buffering
           CW_ExciterIQData(CW_SHAPING_RISE);
+#ifdef G0ORX_AUDIO_DISPLAY 
+          ShowTXAudio();
+#endif
           for (cwBlockIndex = 0; cwBlockIndex < transmitDitUnshapedBlocks; cwBlockIndex++) {
             CW_ExciterIQData(CW_SHAPING_NONE);
+#ifdef G0ORX_AUDIO_DISPLAY 
+            ShowTXAudio();
+#endif
           }
           CW_ExciterIQData(CW_SHAPING_FALL);
 #ifdef G0ORX_AUDIO_DISPLAY 
@@ -2483,9 +2490,14 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
           }
 
           // Pause for one dit length of silence
+#ifdef G0ORX_AUDIO_DISPLAY
+          arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
+#endif
           ditTimerOff = millis();
           while (millis() - ditTimerOff <= transmitDitLength) {
-            ;
+#ifdef G0ORX_AUDIO_DISPLAY
+          ShowTXAudio();
+#endif
           }
 
           modeSelectOutExL.gain(0, 0);  //Power =0
@@ -2493,6 +2505,7 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
           modeSelectOutL.gain(1, 0);  // Sidetone off
           modeSelectOutR.gain(1, 0);
 #ifdef G0ORX_AUDIO_DISPLAY
+          arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
           ShowTXAudio();
 #endif
           cwTimer = millis();
@@ -2506,12 +2519,18 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             // Queue audio blocks--execution time of this loop will be between 0-20ms shorter
             // than the desired dah time, due to audio buffering
             CW_ExciterIQData(CW_SHAPING_RISE);
+#ifdef G0ORX_AUDIO_DISPLAY 
+            ShowTXAudio();
+#endif
             for (cwBlockIndex = 0; cwBlockIndex < transmitDahUnshapedBlocks; cwBlockIndex++) {
               CW_ExciterIQData(CW_SHAPING_NONE);
+#ifdef G0ORX_AUDIO_DISPLAY 
+              ShowTXAudio();
+#endif
             }
             CW_ExciterIQData(CW_SHAPING_FALL);
 #ifdef G0ORX_AUDIO_DISPLAY 
-              ShowTXAudio();
+            ShowTXAudio();
 #endif
             // Wait for calculated dah time, allowing audio blocks to be played
             while (millis() - dahTimerOn <= 3UL * transmitDitLength) {
@@ -2519,9 +2538,14 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             }
 
             // Pause for one dit length of silence
+#ifdef G0ORX_AUDIO_DISPLAY
+            arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
+#endif
             ditTimerOff = millis();
             while (millis() - ditTimerOff <= transmitDitLength) {
-              ;
+#ifdef G0ORX_AUDIO_DISPLAY
+              ShowTXAudio();
+#endif
             }
 
             modeSelectOutExL.gain(0, 0);  //Power =0
@@ -2529,11 +2553,17 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
             modeSelectOutL.gain(1, 0);  // Sidetone off
             modeSelectOutR.gain(1, 0);
 #ifdef G0ORX_AUDIO_DISPLAY
+            arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
             ShowTXAudio();
 #endif
             cwTimer = millis();
+          } else {
+#ifdef G0ORX_AUDIO_DISPLAY
+            arm_scale_f32 (mic_audio_buffer, 0.0, mic_audio_buffer, 256);
+            ShowTXAudio();
+#endif
           }
-        }
+        } 
         keyPressedOn = 0;  // Fix for keyer click-clack.  KF5N August 16, 2023
       }                    //End Relay timer
 
