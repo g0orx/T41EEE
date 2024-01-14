@@ -26,7 +26,6 @@ int (*functionPtr[])() = { &BearingMaps, &CWOptions, &RFOptions, &VFOSelect,
 *****/
 void ShowMenu(const char *menu[], int where)
 {
-  Serial.println(String(__FUNCTION__));
   tft.setFontScale( (enum RA8875tsize) 1);  
 
   if (menuStatus == NO_MENUS_ACTIVE)                                        // No menu selected??
