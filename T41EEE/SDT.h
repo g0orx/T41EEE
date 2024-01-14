@@ -6,8 +6,8 @@
 // G0ORX_FRONTPANEL and G0ORX_FRONTPANEL2 are mutually exclusive  (only enable 1 of them if at all)
 // G0ORX_FRONTPANEL is the MCP23017 front panel for the encoders and push buttons
 // G0ORX_FRONTPANEL_2 is the Raspberry Pi Pico front panel
-//#define G0ORX_FRONTPANEL
-#define G0ORX_FRONTPANEL_2
+#define G0ORX_FRONTPANEL
+//#define G0ORX_FRONTPANEL_2
 
 #if (defined(G0ORX_FRONTPANEL) && defined(G0ORX_FRONTPANEL_2))
 #error Only G0ORX_FRONTPANEL OR G0ORX_FRONTPANEL_2 can be defined (not both)
@@ -407,6 +407,7 @@ extern struct maps myMapFiles[];
 #define OPTO_OUTPUT 24  // To optoisolator and keyed circuit
 #define STRAIGHT_KEY 0
 #define KEYER 1
+#define IAMBIC_KEYER 2  // G0ORX
 #define KEYONTIME 500  // AFP17-22 key on time
 //========================================================= End Pin Assignments =================================
 //===============================================================================================================
@@ -794,7 +795,7 @@ struct config_t {
   int paddleDit = KEYER_DIT_INPUT_TIP;
   int paddleDah = KEYER_DAH_INPUT_RING;
   int decoderFlag = DECODER_STATE;        // JJP 7-3-23
-  int keyType = STRAIGHT_KEY_OR_PADDLES;  // straight key = 0, keyer = 1  JJP 7-3-23
+  int keyType = STRAIGHT_KEY_OR_PADDLES;  // straight key = 0, keyer = 1  JJP 7-3-23, iambic keyer = 2 G0ORX
   int currentWPM = DEFAULT_KEYER_WPM;     // 4 bytes default = 15 JJP 7-3-23
   int CWOffset = 2;                       //
   float32_t sidetoneVolume = 30.0;        // 4 bytes

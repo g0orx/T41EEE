@@ -1972,29 +1972,32 @@ void Splash() {
   tft.setTextColor(RA8875_WHITE);
   tft.setCursor(100, 300);  // 38 = letters in string
   tft.print("Al Peter, AC8GY     Jack Purdum, W8TEE");
+#if !(defined(G0ORX_CAT) || defined (G0ORX_FRONTPANEL) || defined(G0ORX_FRONTPANEL_2))
   tft.setCursor((XPIXELS / 2) - (12 * tft.getFontWidth()) / 2, YPIXELS / 2 + 110);  // 12 = letters in "Property of:"
   tft.print("Property of:");
   tft.setFontScale(2);
   tft.setTextColor(RA8875_GREEN);
+
   centerCall = (XPIXELS - strlen(MY_CALL) * tft.getFontWidth()) / 2;
   tft.setCursor(centerCall, YPIXELS / 2 + 160);
   tft.print(MY_CALL);
+#endif
 
 #ifdef G0ORX_CAT
   tft.setFontScale(1);
-  tft.setCursor(0, YPIXELS / 4 + 150);
+  tft.setCursor(0, YPIXELS / 2 + 150);
   tft.print("Includes: USB CAT by John Melton, G0ORX");
 #endif
 
 #ifdef G0ORX_FRONTPANEL
   tft.setFontScale(1);
-  tft.setCursor(0, YPIXELS / 4 + 180);
+  tft.setCursor(0, YPIXELS / 2 + 175);
   tft.print("Includes: Front Panel by John Melton, G0ORX");
 #endif
 
 #ifdef G0ORX_FRONTPANEL_2
   tft.setFontScale(1);
-  tft.setCursor(0, YPIXELS / 4 + 180);
+  tft.setCursor(0, YPIXELS / 2 + 175);
   tft.print("Includes: Pico Front Panel by John Melton, G0ORX");
 #endif
 
@@ -2248,6 +2251,11 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
   bool cwKeyDown;
   unsigned long cwBlockIndex;
 
+  bool dit = false;
+  bool dah = false;
+  bool send_dit = false;
+  bool send_dah = false;
+
 #ifdef G0ORX_CAT
   CATSerialEvent();
 #endif
@@ -2271,7 +2279,7 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
 #endif
   if (EEPROMData.xmtMode == CW_MODE && (digitalRead(EEPROMData.paddleDit) == HIGH && digitalRead(EEPROMData.paddleDah) == HIGH)) radioState = CW_RECEIVE_STATE;  // Was using symbolic constants. Also changed in code below.  KF5N August 8, 2023
   if (EEPROMData.xmtMode == CW_MODE && (digitalRead(EEPROMData.paddleDit) == LOW && EEPROMData.xmtMode == CW_MODE && EEPROMData.keyType == 0)) radioState = CW_TRANSMIT_STRAIGHT_STATE;
-  if (EEPROMData.xmtMode == CW_MODE && (keyPressedOn == 1 && EEPROMData.xmtMode == CW_MODE && EEPROMData.keyType == 1)) radioState = CW_TRANSMIT_KEYER_STATE;
+  if (EEPROMData.xmtMode == CW_MODE && (keyPressedOn == 1 && EEPROMData.xmtMode == CW_MODE && (EEPROMData.keyType == 1 || EEPROMData.keyType == 2))) radioState = CW_TRANSMIT_KEYER_STATE;
   if (lastState != radioState) {
     SetFreq();  // Update frequencies if the radio state has changed.
     SetAudioOperatingState(radioState);
@@ -2462,7 +2470,29 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
       while (millis() - cwTimer <= EEPROMData.cwTransmitDelay) {
         digitalWrite(RXTX, HIGH);
 
-        if (digitalRead(EEPROMData.paddleDit) == LOW) {  // Keyer Dit
+        dit = digitalRead(EEPROMData.paddleDit) == LOW;
+        dah = digitalRead(EEPROMData.paddleDah) == LOW;
+
+        if(EEPROMData.keyType==2) { // Iambic-A
+          if(dit && dah) {
+            // both pressed - alternate dit dah
+            if(send_dah==false) {
+              send_dit=false;
+              send_dah=true;
+            } else {
+              send_dit=true;
+              send_dah=false;
+            }
+          } else {
+            send_dit = dit;
+            send_dah = dah;
+          }
+        } else {
+          send_dit = dit;
+          send_dah = dah;
+        }
+        //if (digitalRead(EEPROMData.paddleDit) == LOW) {  // Keyer Dit
+        if(send_dit) {
           ditTimerOn = millis();
           modeSelectOutExL.gain(0, EEPROMData.powerOutCW[EEPROMData.currentBand]);  //AFP 10-21-22
           modeSelectOutExR.gain(0, EEPROMData.powerOutCW[EEPROMData.currentBand]);  //AFP 10-21-22
@@ -2510,7 +2540,8 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
 #endif
           cwTimer = millis();
         } else {
-          if (digitalRead(EEPROMData.paddleDah) == LOW) {  //Keyer DAH
+          //if (digitalRead(EEPROMData.paddleDah) == LOW) {  //Keyer DAH
+          if (send_dah) {  //Keyer DAH
             dahTimerOn = millis();
             modeSelectOutExL.gain(0, EEPROMData.powerOutCW[EEPROMData.currentBand]);
             modeSelectOutExR.gain(0, EEPROMData.powerOutCW[EEPROMData.currentBand]);

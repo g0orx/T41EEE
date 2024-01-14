@@ -1706,7 +1706,7 @@ void ShowTXAudio() {
 
 void ClearTXAudio() {
   tft.fillRect(BAND_INDICATOR_X - 8, AUDIO_SPECTRUM_TOP + 1, 252, 116, RA8875_BLACK);
-  for(int i=1;i<256;i++) {
+  for(int i=0;i<256;i++) {
     audio_sample[i]=0.0;
   }
 }
