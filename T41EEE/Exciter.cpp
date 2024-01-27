@@ -70,9 +70,7 @@ void ExciterIQData()
     arm_fir_decimate_f32(&FIR_dec2_EX_I, float_buffer_L_EX, float_buffer_L_EX, 512);
     arm_fir_decimate_f32(&FIR_dec2_EX_Q, float_buffer_R_EX, float_buffer_R_EX, 512);
 
-#ifdef G0ORX_AUDIO_DISPLAY
-    arm_copy_f32 (float_buffer_L_EX, mic_audio_buffer, 256);
-#endif
+
 
     //============================  Transmit EQ  ========================  AFP 10-02-22
     if (EEPROMData.xmitEQFlag == ON ) {
@@ -82,6 +80,10 @@ void ExciterIQData()
 
 
     arm_copy_f32 (float_buffer_L_EX, float_buffer_R_EX, 256);
+
+#ifdef G0ORX_AUDIO_DISPLAY
+    arm_copy_f32 (float_buffer_L_EX, mic_audio_buffer, 256);
+#endif
 
     // =========================    End CW Xmit
     //--------------  Hilbert Transformers

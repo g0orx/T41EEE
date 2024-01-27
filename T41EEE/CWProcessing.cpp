@@ -216,7 +216,7 @@ void SetTransmitDitLength(int wpm) {
     void
 *****/
 void SetKeyType() {
-  const char *keyChoice[] = { "Straight Key", "Keyer", "Iambic A" };
+  const char *keyChoice[] = { "Straight Key", "Keyer", "Iambic A". "Cancel" };
 
   EEPROMData.keyType = SubmenuSelect(keyChoice, 3, 0);
   // Make sure the EEPROMData.paddleDit and EEPROMData.paddleDah variables are set correctly for straight key.

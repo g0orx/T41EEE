@@ -6,8 +6,8 @@
 // G0ORX_FRONTPANEL and G0ORX_FRONTPANEL2 are mutually exclusive  (only enable 1 of them if at all)
 // G0ORX_FRONTPANEL is the MCP23017 front panel for the encoders and push buttons
 // G0ORX_FRONTPANEL_2 is the Raspberry Pi Pico front panel
-#define G0ORX_FRONTPANEL
-//#define G0ORX_FRONTPANEL_2
+//#define G0ORX_FRONTPANEL
+#define G0ORX_FRONTPANEL_2
 
 #if (defined(G0ORX_FRONTPANEL) && defined(G0ORX_FRONTPANEL_2))
 #error Only G0ORX_FRONTPANEL OR G0ORX_FRONTPANEL_2 can be defined (not both)
@@ -21,6 +21,12 @@
 
 // G0ORX_VFO -- uses User1 to copy VFOA to VFOB, User2 to copy VFOB to VFOA
 #define G0ORX_VFO
+
+//#define G0ORX_MIDI
+#ifdef G0ORX_MIDI
+extern void MIDI_setup();
+extern void MIDI_loop();
+#endif
 
 //#define NETWORK
 #ifdef NETWORK

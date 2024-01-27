@@ -2019,9 +2019,9 @@ void setup() {
 
   Serial.begin(9600);
 
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  //while (!Serial) {
+  //  ; // wait for serial port to connect. Needed for native USB port only
+  //}
 
   setSyncProvider(getTeensy3Time);  // get TIME from real time clock with 3V backup battery
   setTime(now());
@@ -2125,6 +2125,9 @@ void setup() {
   network_initialized=Ethernet_init();
 #endif
 
+#ifdef G0ORX_MIDI
+  MIDI_setup();
+#endif
   // =============== EEPROM section =================
   EnableButtonInterrupts();
   EEPROMStartup();
@@ -2204,7 +2207,7 @@ void setup() {
   ShowFrequency();
   SetFreq();
   zoomIndex = EEPROMData.spectrum_zoom - 1;  // ButtonZoom() increments zoomIndex, so this cancels it so the read from EEPROM is accurately restored.  KF5N August 3, 2023
-  ButtonZoom();                              // Restore zoom settings.  KF5N August 3, 2023
+  ButtonZoom();                              // Restore zoom settings.  KF5N AugustIf there is another go around on the main board it would be nice if the USB Host connector J24 was just a copy of the 5 pins in a line on the Teensy board rather than a 2x3 IDC connector so that the standard USB Host cable could be used.  I guess I could use a 5 pin header on the Main board with extended pins  3, 2023
   knee_dBFS = -15.0;                         // Is this variable actually used???
   comp_ratio = 5.0;
   attack_sec = .1;
@@ -2258,6 +2261,10 @@ FASTRUN void loop()  // Replaced entire loop() with Greg's code  JJP  7/14/23
 
 #ifdef G0ORX_CAT
   CATSerialEvent();
+#endif
+
+#ifdef G0ORX_MIDI
+  MIDI_loop();
 #endif
 
 #ifdef NETWORK
